@@ -1,0 +1,97 @@
+CREATE DATABASE cake_shop;
+USE cake_shop;
+
+CREATE TABLE users (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(100) NOT NULL UNIQUE,
+    PASSWORD VARCHAR(255) NOT NULL,
+    is_admin TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create a default admin user (username: admin, password: admin123)
+INSERT INTO users (username, email, PASSWORD, is_admin) 
+VALUES ('admin', 'admin@cakeshop.com', 'admin123', 1);
+
+ALTER TABLE users ADD COLUMN plain_password VARCHAR(50);
+
+
+CREATE TABLE products (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    image VARCHAR(255),
+    category ENUM('cake', 'craft') NOT NULL,
+    stock INT(11) NOT NULL DEFAULT 10,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE orders (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  user_id int(11) NOT NULL,
+  total_amount decimal(10,2) NOT NULL,
+  status enum('Pending','Processing','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
+  order_date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  shipping_address text NOT NULL,
+  payment_method varchar(50) NOT NULL,
+  PRIMARY KEY (id),
+  KEY user_id (user_id),
+  CONSTRAINT orders_ibfk_1 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE order_items (
+  id int(11) NOT NULL AUTO_INCREMENT,
+  order_id int(11) NOT NULL,
+  product_id int(11) NOT NULL,
+  quantity int(11) NOT NULL,
+  price decimal(10,2) NOT NULL,
+  PRIMARY KEY (id),
+  KEY order_id (order_id),
+  KEY product_id (product_id),
+  CONSTRAINT order_items_ibfk_1 FOREIGN KEY (order_id) REFERENCES orders (id) ON DELETE CASCADE,
+  CONSTRAINT order_items_ibfk_2 FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Alter orders table to add the new required fields
+ALTER TABLE orders 
+ADD COLUMN full_name VARCHAR(100) NOT NULL AFTER user_id,
+ADD COLUMN email VARCHAR(100) NOT NULL AFTER full_name,
+ADD COLUMN phone VARCHAR(20) NOT NULL AFTER shipping_address,
+ADD COLUMN fulfillment_option VARCHAR(20) NOT NULL AFTER payment_method;
+
+-- Rename shipping_address to address for consistency
+ALTER TABLE orders 
+CHANGE COLUMN shipping_address address TEXT NOT NULL;
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id INT(11) AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11) NOT NULL,
+    title VARCHAR(100) NOT NULL,
+    message TEXT NOT NULL,
+    is_read TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+ALTER TABLE products ADD COLUMN delivery_datetime DATETIME NOT NULL AFTER stock;
+
+ALTER TABLE users ADD COLUMN profile_picture VARCHAR(255) DEFAULT NULL;
+
+ALTER TABLE users ADD COLUMN full_name VARCHAR(100) DEFAULT NULL;
+ALTER TABLE users ADD COLUMN address TEXT DEFAULT NULL;
+ALTER TABLE users ADD COLUMN phone VARCHAR(20) DEFAULT NULL;
+
+CREATE TABLE reviews (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    order_id INT NOT NULL,
+    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+ALTER TABLE users ADD COLUMN is_active TINYINT(1) NOT NULL DEFAULT 1;
